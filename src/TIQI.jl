@@ -1,5 +1,7 @@
 module TIQI
 
-# package code goes here
+include("ionizer.jl")
+include("plots.jl")
+include("thresholding.jl")
 
-end # module
+end
