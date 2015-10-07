@@ -15,8 +15,8 @@ function count_histogram(counts)
 end
 
 function bipoisson(n, λ0, λ1, bright_ratio)
-    if (bright_ratio < 0 || bright_ratio > 1)
-        0
+    if (bright_ratio < 0 || bright_ratio > 1 || λ0 < 0 || λ1 < 0)
+        0.0
     else
         (exp(-λ0) * (1 - bright_ratio) * λ0.^n +
             exp(-λ1) * bright_ratio * λ1.^n) ./ gamma(n + 1)
@@ -24,7 +24,7 @@ function bipoisson(n, λ0, λ1, bright_ratio)
 end
 
 function fit_count_histogram(histo)
-    ns = [0:(length(histo) - 1)]
+    ns = collect(0:(length(histo) - 1))
     function negloglike(params)
        -sum(histo .* log(bipoisson(ns, params...)))
     end
