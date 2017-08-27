@@ -34,11 +34,11 @@ function fit_count_histogram(histo)
 end
 
 function count_threshold(λ0, λ1)
-    round(λ1 / log(1 + λ1 / λ0))
+    floor((λ1 - λ0) / log(λ1 / λ0))
 end
 
 function apply_threshold(counts, threshold)
-    map(c -> count(n -> n >= threshold, c) / length(c), counts)
+    map(c -> count(n -> n > threshold, c) / length(c), counts)
 end
 
 function auto_threshold(shots)

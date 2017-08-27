@@ -1,3 +1,30 @@
+function raw_to_counts(raw)
+    x_values = convert(Array{Float64}, unique(sort(raw[:, 2])))
+
+    shots = Array(Array{UInt32, 1}, length(x_values))
+    for i in 1:length(x_values)
+        shots[i] = UInt32[]
+    end
+
+    for i in 1:(size(raw)[1])
+        x_index = searchsorted(x_values, raw[i, 2])[1]
+        for val in raw[i, 4:end]
+            if val == ""
+                break
+            end
+
+            counts = convert(UInt32, val)
+            if counts & (1 << 31) != 0
+                continue
+            end
+
+            push!(shots[x_index], counts)
+        end
+    end
+
+    x_values, shots
+end
+
 function last_complete_row_2d(raw, y_column)
     lines_per_y = 0
     for (i, y) in enumerate(slice(raw, :, y_column))
@@ -59,8 +86,51 @@ function raw_to_counts_2d(raw, lines_per_y::Int64)
     x_values, y_values, shots
 end
 
-function read_shots_log_2d(filename; y_reversed=false)
-    data = readcsv(filename)
+function walk_match(dir, prefix, suffix)
+    if isempty(dir)
+        dir = "."
+    end
+    entries = readdir(dir)
+    for e in entries
+        if !startswith(e, prefix)
+            continue
+        end
+
+        path = joinpath(dir, e)
+        if endswith(path, suffix)
+            return path
+        end
+
+        # Recurse into child directories.
+        if isdir(path)
+            p = walk_match(path, "", suffix)
+            if !isempty(p)
+                return p
+            end
+        end
+    end
+    return ""
+end
+
+function find_file(datapath, suffix)
+    if endswith(datapath, suffix)
+        return datapath
+    end
+
+    dirname, start = splitdir(datapath)
+    path = walk_match(dirname, start, suffix)
+    if isempty(path)
+        error("No file found in '$datapath' ending in '$suffix'.")
+    end
+    return path
+end
+
+function read_shots_log(datapath)
+    raw_to_counts(readcsv(find_file(datapath, "_shots_log.txt")))
+end
+
+function read_shots_log_2d(datapath; y_reversed=false)
+    data = readcsv(find_file(datapath, "_2D_shots_log.txt"))
     last_row, lines_per_y = last_complete_row_2d(data, 3)
 
     if y_reversed
@@ -72,9 +142,9 @@ function read_shots_log_2d(filename; y_reversed=false)
     raw_to_counts_2d(clipped_data, lines_per_y)
 end
 
-function read_thresholded_2d(filename)
+function read_thresholded_2d(datapath)
     # Read in file, skipping header line
-    data = readcsv(filename)[2:end, :]
+    data = readcsv(find_file(datapath, "_plot_0.csv"))[2:end, :]
 
     last_row, lines_per_y = last_complete_row_2d(data, 2)
 
